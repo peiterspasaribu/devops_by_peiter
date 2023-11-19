@@ -1,0 +1,26 @@
+apiVersion: 1
+datasources:
+  - name: Loki_FE_Prod
+    type: loki
+    access: proxy
+    url: http://192.168.100.11:3100
+    version: 1
+    editable: false
+  - name: Loki_BE_Prod
+    type: loki
+    access: proxy
+    url: http://192.168.100.21:3100
+    version: 1
+    editable: false
+  - name: Loki_FE_Dev
+    type: loki
+    access: proxy
+    url: http://192.168.100.12:3100
+    version: 1
+    editable: false
+  - name: Loki_BE_Dev
+    type: loki
+    access: proxy
+    url: http://192.168.100.22:3100
+    version: 1
+    editable: false

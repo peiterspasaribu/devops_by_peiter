@@ -1,0 +1,17 @@
+version: "3.2"
+services:
+  grafana:
+    image: grafana/grafana:10.0.3
+    container_name: monstack_grafana
+    hostname: monstack_grafana
+    volumes:
+      - /home/peiter/monitoring_system/grafana_stack_confile/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yaml
+    ports:
+      - "3123:3000"
+    restart: unless-stopped
+    networks:
+      network_monitoring:
+        ipv4_address: 192.168.55.10
+networks:
+  network_monitoring:
+    external: true

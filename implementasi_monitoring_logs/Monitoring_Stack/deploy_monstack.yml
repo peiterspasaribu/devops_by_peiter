@@ -1,0 +1,55 @@
+- name: "Play : Destroy Existing Log Monitoring Container App"
+  hosts: frontend,backend,master
+  vars_files :
+    - vars/monstack.yml
+  tasks :
+    - name: "Pre Play _ Task-1: Find Existing Container 'monstack_'"
+      shell:
+        cmd: "docker ps -q -a -f name='monstack_*'"
+      register: container_ids
+      changed_when: false
+      ignore_errors: true
+    - name: "Pre Play _ Task-2: Stop Matching Existing Container 'monstack_'"
+      shell:
+        cmd: "docker stop {{ item }}"
+      with_items: "{{ container_ids.stdout_lines }}"
+      when: container_ids.stdout_lines | length > 0
+    - name: "Pre Play _ Task-3: Remove Matching Existing Container 'monstack_'"
+      shell:
+        cmd: "docker rm {{ item }}"
+      with_items: "{{ container_ids.stdout_lines }}"
+      when: container_ids.stdout_lines | length > 0
+    - name: "Pre Play _ Task-4: Check for Existing Docker Network 'network_monitoring'"
+      shell:
+        cmd: "docker network inspect network_monitoring"
+      ignore_errors: yes
+      register: existing_network
+      changed_when: false
+    - name: "Pre Play _ Task-5: Remove Existing Docker Network (if exists)"
+      shell:
+        cmd: "docker network rm network_monitoring"
+      when: existing_network.rc == 0
+
+- name: "Play : Setup Centralized Log Monitoring Container App"
+  hosts: frontend,backend,master
+  vars_files :
+    - vars/monstack.yml
+  tasks :
+    - name: "Main Play _ Task-1: Creating Docker Network Manually"
+      shell:
+        cmd: "docker network create --subnet 192.168.55.0/24 --gateway 192.168.55.1 network_monitoring"
+    - name: "Main Play _ Task-2: Deploy Promtail and Loki Container"
+      shell:
+        cmd: "docker-compose -f /home/peiter/monitoring_system/promtail-loki_compose/docker-compose_promtail-loki.yml up -d"
+      when: >
+          (ansible_facts['hostname'] == server_hostname.fe_prod )
+          or
+          (ansible_facts['hostname'] == server_hostname.be_prod )
+          or
+          (ansible_facts['hostname'] == server_hostname.fe_dev )
+          or
+          (ansible_facts['hostname'] == server_hostname.be_dev )
+    - name: "Main Play _ Task-3: Deploy Grafana Container"
+      shell:
+        cmd: "docker-compose -f /home/peiter/monitoring_system/grafana_compose/docker-compose_grafana.yml up -d"
+      when: ansible_facts['hostname'] == server_hostname.controller

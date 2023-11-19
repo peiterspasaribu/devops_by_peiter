@@ -1,0 +1,10 @@
+server_hostname:
+  fe_prod: "instance-prod-frontend"
+  be_prod: "instance-prod-backend"
+  db1_prod: "instance-prod-db1"
+  db2_prod: "instance-prod-db2"
+  fe_dev: "instance-dev-frontend"
+  be_dev: "instance-dev-backend"
+  db1_dev: "instance-dev-db1"
+  db2_dev: "instance-dev-db2"
+  controller: "instance-controller"

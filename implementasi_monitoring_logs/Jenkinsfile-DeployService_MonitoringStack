@@ -1,0 +1,165 @@
+pipeline {
+    agent any 
+    options {
+        buildDiscarder(logRotator(daysToKeepStr: '3', numToKeepStr: '10'))
+    }
+    environment {
+        envBuildDateInfo = sh(script: "echo \$(date +'Build${env.BUILD_NUMBER}_%H:%M:%S_%d-%m-%Y')", returnStdout: true)
+
+        slackCorp="devopsbypeiter"
+        slackJenkinsCIKredName = "XXXSECRETXXX"
+        slackChanGroup = "sandbox-peiter"
+
+        //Get Git Branch Name
+        FULL_PATH_BRANCH = "${sh(script:'git name-rev --name-only HEAD', returnStdout: true)}"
+        GIT_BRANCH = FULL_PATH_BRANCH.substring(FULL_PATH_BRANCH.lastIndexOf('/') + 1, FULL_PATH_BRANCH.length())
+
+        envSPPeiter = credentials("cred-SP-Peiter")
+    }
+
+    stages {
+        stage("Task - Information") {
+            agent {
+                node {
+                    label 'nx'
+                }
+            }
+            steps {
+                script {
+                    def dateBuild = sh(script: 'date', returnStdout: true)
+                    def commitHash = sh(script: 'git rev-parse --short HEAD', returnStdout: true) //Mendapatkan commit hash terbaru dari current branch
+                    def hostName = sh(script: 'hostname', returnStdout: true) //Mendapatkan hostname node
+                    slackSend channel: "${slackChanGroup}", color: "good", message: "### STARTING JENKINS JOB ### | Date : ${dateBuild} | Hostname : ${hostName} | Job Name : ${env.JOB_NAME} - Build : ${env.BUILD_ID} | Branch : ${env.GIT_BRANCH} | Commit Hash : ${commitHash}", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"
+                }
+            }
+        }
+        stage("[N11] Task : Copy Workdir LOG Monitoring Peiter Homedir") {
+            agent {
+                node {
+                    label 'n11'
+                }
+            }
+            steps {
+                script {
+                    whichNODE = "n11"
+                    taskCOPYMainWORKDIR(whichNODE)
+                }
+            }
+        }
+        stage("[N12] Task : Copy Workdir LOG Monitoring Peiter Homedir") {
+            agent {
+                node {
+                    label 'n12'
+                }
+            }
+            steps {
+                script {
+                    whichNODE = "n12"
+                    taskCOPYMainWORKDIR(whichNODE)
+                }
+            }
+        }
+        stage("[N13] Task : Copy Workdir LOG Monitoring Peiter Homedir") {
+            agent {
+                node {
+                    label 'n13'
+                }
+            }
+            steps {
+                script {
+                    whichNODE = "n13"
+                    taskCOPYMainWORKDIR(whichNODE)
+                }
+            }
+        }
+        stage("[N14] Task : Copy Workdir LOG Monitoring Peiter Homedir") {
+            agent {
+                node {
+                    label 'n14'
+                }
+            }
+            steps {
+                script {
+                    whichNODE = "n14"
+                    taskCOPYMainWORKDIR(whichNODE)
+                }
+            }
+        }
+        stage("[NX] Task Master: Copy Workdir LOG Monitoring and Run Ansible") {
+            agent {
+                node {
+                    label 'nx'
+                }
+            }
+            steps {
+                script {
+                    slackSend channel: "${slackChanGroup}", color: "good", message: "Start Implementation Log Monitoring System on All Node", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"
+                    whichNODE = "nx"
+                    taskCOPYMainWORKDIR(whichNODE)
+                    ansiblePlaybook( //Install Plugin 'Ansible'
+                        colorized: true, //Install Plugin 'Ansi Color' dan pada jenkins-url/manage/configure, atur field 'Global Color map for all builds' isi dengan value 'xterm'.
+                        inventory: '/etc/ansible/hosts',
+                        playbook: '/home/peiter/monitoring_system/deploy_monstack.yml',
+                        credentialsId: 'sshkey-jenkinsansible_UserUbuntu', //Kredensial Jenkins Type Username-PrivateKey
+                    )
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo"###[SECPOST]### FINISHING SUCCESS POST"
+            slackSend channel: "${slackChanGroup}", color: "good", message: "Implementation Log Monitoring System Succeed!", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"
+        }
+        failure {
+            echo"###[SECPOST]### FINISHING FAILURE POST"
+            slackSend channel: "${slackChanGroup}", color: "danger", message: "Implementation Log Monitoring System Failed!", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"
+        }
+        cleanup {
+            echo"###[SECPOST]### FINISHING CLEANUP POST"
+            slackSend channel: "${slackChanGroup}", color: "good", message: "CLEANING UP THE WORKING DIRECTORY (rm -rf)", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"
+            script{
+                /////////////BLOCK TASK CLEANUP/////////////
+                node("n11"){
+                    sh"rm -rf ./*"
+                }
+                node("n12"){
+                    sh"rm -rf ./*"
+                }
+                node("n13"){
+                    sh"rm -rf ./*"
+                }
+                node("n14"){
+                    sh"rm -rf ./*"
+                }
+                node("nx"){
+                    sh"rm -rf ./*"
+                }
+                /////////////BLOCK TASK CLEANUP/////////////
+            }
+            slackSend channel: "${slackChanGroup}", color: "good", message: "-- JOB SCHEDULE BACKUP DB FINISH ---", teamDomain: "${slackCorp}", tokenCredentialId: "${slackJenkinsCIKredName}"   
+        }
+    }
+}
+def taskCOPYMainWORKDIR(whichNODE){
+    script {
+        if(whichNODE == "nx"){
+            if (fileExists('/home/peiter/monitoring_system/')) {
+                sh"sudo rm -rf /home/peiter/monitoring_system/"
+                sh"sudo cp -R './implementasi_monitoring_logs/Monitoring_Stack/' /home/peiter/monitoring_system/"
+            }
+            else {
+                sh"sudo cp -R './implementasi_monitoring_logs/Monitoring_Stack/' /home/peiter/monitoring_system/"
+            }
+        }
+        else {
+            if (fileExists('/home/peiter/monitoring_system/')) {
+                sh (script: "echo \"${envSPPeiter_PSW}\" | sudo -S rm -rf /home/peiter/monitoring_system/")
+                sh (script: "echo \"${envSPPeiter_PSW}\" | sudo -S cp -R './implementasi_monitoring_logs/Monitoring_Stack/' /home/peiter/monitoring_system/")
+            }
+            else {
+                sh (script: "echo \"${envSPPeiter_PSW}\" | sudo -S cp -R './implementasi_monitoring_logs/Monitoring_Stack/' /home/peiter/monitoring_system/")
+            }
+        }
+    }
+}
