@@ -12,6 +12,8 @@ Simple project devops ini akan lebih berfokus ke penggunaan tools opensource dar
 * Monitoring Stack (Prometheus, Grafana, Loki, Promtail).
 
 
-My contant:
+My contact:
+
 instagram: https://www.instagram.com/peiterspasaribu/
+
 linkedin: https://www.linkedin.com/in/peiterspasaribu/
